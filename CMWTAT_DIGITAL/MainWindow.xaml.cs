@@ -5,25 +5,16 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using OSVersionInfoClass;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using System.Net;
 using System.IO;
 using System.Threading;
 using Microsoft.Win32;
-using CMWTAT_DIGITAL.Domain;
 using System.Text.RegularExpressions;
-using System.Windows.Forms;
 using System.Globalization;
 using System.Reflection;
+using System.Windows.Forms;
+using OSVersionInfoClass;
+using Newtonsoft.Json.Linq;
 using MaterialDesignThemes.Wpf;
 
 namespace CMWTAT_DIGITAL
@@ -51,7 +42,7 @@ namespace CMWTAT_DIGITAL
         public static void ConsoleLog(string log_text = "")
         {
             Console.WriteLine(log_text);
-            if (Program.log2file == true)
+            if (App.log2file == true)
             {
                 WriteLog(log_text);
             }
@@ -84,7 +75,7 @@ namespace CMWTAT_DIGITAL
             fs.Close();
         }
 
-        string tempfile = System.IO.Path.GetTempPath() + @"CMWTAT_DIGITAL\";
+        string tempfile = Path.GetTempPath() + @"CMWTAT_DIGITAL\";
 
         public void DelectTempFile()
         {
@@ -133,8 +124,6 @@ namespace CMWTAT_DIGITAL
 
             ConsoleLog("开始写入缓存文件");
             File.WriteAllBytes(tempfile + "ClipUp" + ".exe", Properties.Resources.ClipUp);
-            //File.WriteAllBytes(tempfile + "LibHWIDx86" + ".dll", Properties.Resources.LibHWIDx86);
-            //File.WriteAllBytes(tempfile + "LibHWIDx64" + ".dll", Properties.Resources.LibHWIDx64);
             File.WriteAllBytes(tempfile + "slmgr" + ".vbs", Properties.Resources.slmgr);
             ConsoleLog("写入缓存文件完毕");
         }
@@ -156,7 +145,7 @@ namespace CMWTAT_DIGITAL
             try
             {
                 //根据名字载入语言文件
-                langRd = System.Windows.Application.LoadComponent(new Uri(@"Lang\" + LangName + ".xaml", UriKind.Relative)) as ResourceDictionary;
+                langRd = System.Windows.Application.LoadComponent(new Uri(@"/CMWTAT_DIGITAL;component/Lang\" + LangName + ".xaml", UriKind.Relative)) as ResourceDictionary;
                 NowLang = LangName;
                 if (LangName != Constants.DefaultLang)
                 {
@@ -169,7 +158,7 @@ namespace CMWTAT_DIGITAL
             {
                 NotSupportLang = true;
                 //System.Windows.MessageBox.Show("The " + LangName + " language pack was not found and the language was set to English.\nIf you want to use Chinese as the interface language, click the \"Language\" button to switch.");
-                langRd = System.Windows.Application.LoadComponent(new Uri(@"Lang\" + Constants.DefaultLang + ".xaml", UriKind.Relative)) as ResourceDictionary;
+                langRd = System.Windows.Application.LoadComponent(new Uri(@"/CMWTAT_DIGITAL;component/Lang\" + Constants.DefaultLang + ".xaml", UriKind.Relative)) as ResourceDictionary;
                 NowLang = Constants.DefaultLang;
             }
 
@@ -203,27 +192,19 @@ namespace CMWTAT_DIGITAL
             ConsoleLog("AppAssemblyFullName: " + assembly.FullName);
 
             // 获取程序集元数据 
-            AssemblyCopyrightAttribute copyright = (AssemblyCopyrightAttribute)
-            AssemblyCopyrightAttribute.GetCustomAttribute(Assembly.GetExecutingAssembly(),
-            typeof(AssemblyCopyrightAttribute));
-            AssemblyDescriptionAttribute description = (AssemblyDescriptionAttribute)
-            AssemblyDescriptionAttribute.GetCustomAttribute(System.Reflection.Assembly.GetExecutingAssembly(),
-            typeof(AssemblyDescriptionAttribute));
 
-            ProductVersion = System.Windows.Forms.Application.ProductVersion;
+            AssemblyCopyrightAttribute copyright = (AssemblyCopyrightAttribute)
+            Attribute.GetCustomAttribute(assembly, typeof(AssemblyCopyrightAttribute));
+            AssemblyDescriptionAttribute description = (AssemblyDescriptionAttribute)
+            Attribute.GetCustomAttribute(assembly, typeof(AssemblyDescriptionAttribute));
+
+            ProductVersion = assembly.GetName().Version.ToString();
 
             ConsoleLog("AppDescription: " + description.Description);
             ConsoleLog("AppCopyright: " + copyright.Copyright);
-            ConsoleLog("AppProductVersion: " + System.Windows.Forms.Application.ProductVersion);
+            ConsoleLog("AppProductVersion: " + ProductVersion);
         }
 
-        //static bool autoact = false;
-        //static bool hiderun = false;
-        //static bool expact = false;
-        //static bool log2file = false;
-        //static bool showhelp = false;
-
-        //public string SystemEdition = OSVersionInfo.Name + " " + OSVersionInfo.Edition;
         public string SystemEdition = OSVersionInfo.Edition;
 
         bool isDark = false;
@@ -259,130 +240,7 @@ namespace CMWTAT_DIGITAL
 
         public MainWindow()
         {
-            CheckWindowsTheme();
-
-            ConsoleLog("Windows Theme Mode is: " + WindowsTheme);
-
-            GetEdition(); // 获取程序版本
-
-            //autoact = Program.autoact;
-            //hiderun = Program.hiderun;
-            //expact = Program.expact;
-            //log2file = Program.log2file;
-            //showhelp = Program.showhelp;
-
-            //MessageBox.Show("A:" + autoact.ToString() + ";H:" + hiderun.ToString());
-
             InitializeComponent();
-
-            ApplyBase(isDark);
-
-            string LangName = currentCultureInfo.Name;
-            //根据本地语言来进行本地化
-            LangName = LangName.Substring(0, LangName.IndexOf("-"));
-            //LangName = "ja"; // 如需测试语言，请取消注释此行
-            LoadLang(LangName);
-
-            this.Title = this.Title + " V" + ProductVersion; // 初始化语言后为标题增加版本号
-
-            //System.Windows.MessageBox.Show((string)this.Resources["HelpText"]);
-
-            if (Program.showhelp == true)
-            {
-                DialogHelp.IsOpen = true;
-            }
-
-            notifyIcon = new System.Windows.Forms.NotifyIcon(); // 先初始化托盘图标，以方便语言缺省时提示
-            notifyIcon.Text = (string)this.Resources["notifyIconTitle"]; //托盘图标标题
-            notifyIcon.Icon = ((System.Drawing.Icon)(CMWTAT_DIGITAL.Properties.Resources.CMWTAT_ICON));
-
-            if ((Program.hiderun == true && Program.autoact == true) || NotSupportLang == true)
-            {
-
-                //notifyIcon.BalloonTipText = "The app has been minimised. Click the tray icon to show.";
-                //notifyIcon.BalloonTipTitle = "The App";
-
-                //notifyIcon.Icon = new System.Drawing.Icon("TheAppIcon.ico");
-
-                //notifyIcon.Click += new EventHandler(notifyIcon_Click);
-
-                notifyIcon.Visible = true;
-
-                //打开菜单项
-                //System.Windows.Forms.MenuItem open = new System.Windows.Forms.MenuItem("Open");
-                //open.Click += new EventHandler((o, e) =>
-                //{
-                //    this.Show();
-                //});
-
-                //退出菜单项
-                System.Windows.Forms.MenuItem exit = new System.Windows.Forms.MenuItem("Exit");
-                exit.Click += new EventHandler(Exit_Button_Click);
-
-                //关联托盘控件
-                //System.Windows.Forms.MenuItem[] childen = new System.Windows.Forms.MenuItem[] { open, exit };
-
-                System.Windows.Forms.MenuItem[] childen = new System.Windows.Forms.MenuItem[] { exit };
-
-                notifyIcon.ContextMenu = new System.Windows.Forms.ContextMenu(childen);
-
-                //this.notifyIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler((o, e) =>
-                //{
-                //    if (e.Button == MouseButtons.Left) this.Show();
-                //});
-            }
-
-            if (NotSupportLang == true)
-            {
-                int tipShowMilliseconds = 0;
-                string tipTitle = (string)this.Resources["notifyIconTitle"];
-                string tipContent = "The language pack \"" + LangName + "\" was not found, language has been automatically switched to English. You can submit this language on GitHub."; // 提示不支持语言提示
-                ToolTipIcon tipType = ToolTipIcon.None;
-                notifyIcon.ShowBalloonTip(tipShowMilliseconds, tipTitle, tipContent, tipType);
-            }
-
-            if (Program.hiderun == true && Program.autoact == true)
-            {
-                this.Hide();
-
-                int tipShowMilliseconds = 0;
-                string tipTitle = (string)this.Resources["notifyIconTitle"]; //通知气泡标题
-                string tipContent = (string)this.Resources["Running"]; //提示正在运行
-                ToolTipIcon tipType = ToolTipIcon.None;
-                notifyIcon.ShowBalloonTip(tipShowMilliseconds, tipTitle, tipContent, tipType);
-
-                //notifyIcon.BalloonTipClicked += new EventHandler((o, e) =>
-                //{
-                //    //System.Windows.MessageBox.Show(System.Windows.Forms.Control.MouseButtons.ToString());
-                //    if (System.Windows.Forms.Control.MouseButtons == MouseButtons.None) //左键返回不是Right是None
-                //    {
-                //        System.Windows.MessageBox.Show("Hello");
-                //    };
-                //});
-            }
-
-            //初始化动态表单数据绑定
-            DataContext = new ViewModel();
-
-            this.DialogHostGrid.Visibility = Visibility.Visible;
-            
-            DialogWait.IsOpen = true;
-            try
-            {
-                RegistryKey pRegKey = Registry.LocalMachine;
-                pRegKey = pRegKey.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion");
-                SystemEdition = pRegKey.GetValue("EditionID").ToString();
-            }
-            catch
-            {
-                SystemEdition = OSVersionInfo.Edition;
-            }
-
-            //SystemEditionText.Text = SystemEdition;
-            Thread loadthread = new Thread(LoadOSList);
-            loadthread.Start();
-
-            CheckWindowsCore();
         }
 
         JArray ositems;
@@ -390,14 +248,6 @@ namespace CMWTAT_DIGITAL
         string checked_os = "unknow";
 
         bool is_auto = true; //是否为自动模式，false为手动
-
-        private void InvokeTest()
-        {
-            actbtn.Dispatcher.Invoke(new Action(() =>
-            {
-                LoadOSList();
-            }));
-        }
 
         /// <summary>
         /// 检查更新
@@ -444,6 +294,7 @@ namespace CMWTAT_DIGITAL
             }
         }
 
+        public static string StaticServerDomain = "https://uwa-static.cloudmoe.com"; // 静态服务器
         public static string MainServerDomain = "https://cmwtat.cloudmoe.com"; // 主要服务器
         public static string BackupServerDomain = "https://kms.kumo.moe"; // 备用服务器
 
@@ -462,14 +313,14 @@ namespace CMWTAT_DIGITAL
                 string json;
                 try
                 {
-                    json = GetHttpWebRequest(MainServerDomain + "/api/digital?list=1&ver=3"); // 主要服务器
+                    json = GetHttpWebRequest(MainServerDomain + "/api/digital?list=1&ver=4"); // 主要服务器
                 }
                 catch (Exception e)
                 {
                     ConsoleLog("MainServer:" + MainServerDomain + " is not working.");
                     ConsoleLog("Error Message:" + e.Message);
                     ConsoleLog("Ready to use BackupServer:" + BackupServerDomain);
-                    json = GetHttpWebRequest(BackupServerDomain + "/api/digital?list=1&ver=3"); // 备用服务器
+                    json = GetHttpWebRequest(BackupServerDomain + "/api/digital?list=1&ver=4"); // 备用服务器
                 }
                 JObject jsonobj = JObject.Parse(json);
                 List<Frequency> list = new List<Frequency>();
@@ -562,7 +413,7 @@ namespace CMWTAT_DIGITAL
                     DialogWait.IsOpen = false;
                 }));
 
-                if (Program.autoact == true)//自动激活
+                if (App.autoact == true)//自动激活
                 {
                     Thread actthread = new Thread(RunAct);
                     switch (is_selected)
@@ -571,7 +422,7 @@ namespace CMWTAT_DIGITAL
                             actthread.Start();
                             break;
                         case 2: //实验性
-                            if (Program.expact == true)
+                            if (App.expact == true)
                             {
                                 actbtn.Dispatcher.Invoke(new Action(() =>
                                 {
@@ -581,7 +432,7 @@ namespace CMWTAT_DIGITAL
                             }
                             else
                             {
-                                if (Program.hiderun == true)
+                                if (App.hiderun == true)
                                 {
                                     int tipShowMilliseconds = 0;
                                     string tipTitle = (string)this.Resources["notifyIconTitle"];
@@ -593,7 +444,7 @@ namespace CMWTAT_DIGITAL
                             }
                             break;
                         default:
-                            if (Program.hiderun == true)
+                            if (App.hiderun == true)
                             {
                                 int tipShowMilliseconds = 0;
                                 string tipTitle = (string)this.Resources["notifyIconTitle"];
@@ -618,7 +469,7 @@ namespace CMWTAT_DIGITAL
                     DialogWithExit.IsOpen = true;
                 }));
 
-                if (Program.hiderun == true && Program.autoact == true)
+                if (App.hiderun == true && App.autoact == true)
                 {
                     int tipShowMilliseconds = 0;
                     string tipTitle = (string)this.Resources["notifyIconTitle"];
@@ -659,12 +510,12 @@ namespace CMWTAT_DIGITAL
             Thread installthread = new Thread(RunInstall);
             installthread.Start();
         }
-        
+
         private void upgradefullbtn_Click(object sender, RoutedEventArgs e)
         {
             this.DialogUpgradeFullVersion.IsOpen = true;
         }
-        
+
         private void UpgradeFullVersionWindows_Click(object sender, RoutedEventArgs e)
         {
             this.DialogUpgradeFullVersion.IsOpen = false;
@@ -779,14 +630,14 @@ namespace CMWTAT_DIGITAL
                     string json;
                     try
                     {
-                        json = GetHttpWebRequest(MainServerDomain + "/api/digital?list=0&ver=3"); // 主要服务器
+                        json = GetHttpWebRequest(MainServerDomain + "/api/digital?list=0&ver=4"); // 主要服务器
                     }
                     catch (Exception e)
                     {
                         ConsoleLog("MainServer:" + MainServerDomain + " is not working.");
                         ConsoleLog("Error Message:" + e.Message);
                         ConsoleLog("Ready to use BackupServer:" + BackupServerDomain);
-                        json = GetHttpWebRequest(BackupServerDomain + "/api/digital?list=0&ver=3"); // 备用服务器
+                        json = GetHttpWebRequest(BackupServerDomain + "/api/digital?list=0&ver=4"); // 备用服务器
                     }
                     JObject jsonobj = JObject.Parse(json);
                     List<Frequency> list = new List<Frequency>();
@@ -902,7 +753,7 @@ namespace CMWTAT_DIGITAL
         {
             actbtn.Dispatcher.Invoke(new Action(() =>
             {
-                if (Program.hiderun == true && Program.autoact == true)
+                if (App.hiderun == true && App.autoact == true)
                 {
                     int tipShowMilliseconds = 0;
                     string tipTitle = (string)this.Resources["notifyIconTitle"];
@@ -944,7 +795,7 @@ namespace CMWTAT_DIGITAL
                 string targetFile = slmgr_self;
                 bool isrewrite = true; // true=覆盖已存在的同名文件,false则反之
                 ConsoleLog("Copy Start: " + sourceFile + " To " + targetFile);
-                System.IO.File.Copy(sourceFile, targetFile, isrewrite);
+                File.Copy(sourceFile, targetFile, isrewrite);
                 ConsoleLog("Copy Completed.");
             }
             catch (Exception CopyExc)
@@ -953,7 +804,6 @@ namespace CMWTAT_DIGITAL
             }
 
             //旧的位置
-            //string slmgr_self = System.AppDomain.CurrentDomain.BaseDirectory + "slmgr.vbs";
 
             string changepk = Environment.SystemDirectory + "\\changepk.exe";
 
@@ -978,14 +828,14 @@ namespace CMWTAT_DIGITAL
                     string json;
                     try
                     {
-                        json = GetHttpWebRequest(MainServerDomain + "/api/digital?list=0&ver=3"); // 主要服务器
+                        json = GetHttpWebRequest(MainServerDomain + "/api/digital?list=0&ver=4"); // 主要服务器
                     }
                     catch (Exception e)
                     {
                         ConsoleLog("MainServer:" + MainServerDomain + " is not working.");
                         ConsoleLog("Error Message:" + e.Message);
                         ConsoleLog("Ready to use BackupServer:" + BackupServerDomain);
-                        json = GetHttpWebRequest(BackupServerDomain + "/api/digital?list=0&ver=3"); // 备用服务器
+                        json = GetHttpWebRequest(BackupServerDomain + "/api/digital?list=0&ver=4"); // 备用服务器
                     }
                     JObject jsonobj = JObject.Parse(json);
                     List<Frequency> list = new List<Frequency>();
@@ -1115,19 +965,6 @@ namespace CMWTAT_DIGITAL
                     }
                 }
 
-                //写入Win7特征
-                //ChangePKAction(changepk + " /ProductKey " + key);
-
-                if (mode == "4")
-                {
-                    //长期KMS
-                    ConsoleLog(RunCScript(slmgr_self, "-skms 1.1.45.14:1919").Trim()); // いいよ、来いよ ｗｗｗ
-                    //ConsoleLog(RunCMD(@"cscript.exe /nologo %systemroot%\system32\slmgr.vbs -skms 1.1.45.14:1919").Trim()); // いいよ、来いよ ｗｗｗ
-                    //if (runend.EndsWith("successfully."))
-                    //{
-                    //}
-                }
-
                 actbtn.Dispatcher.Invoke(new Action(() =>
                 {
                     this.activatingtext.Text = (string)this.Resources["RunAct_Installing_Key"]; //提示正在安装密钥
@@ -1148,33 +985,45 @@ namespace CMWTAT_DIGITAL
                         ShowBallSameDig();
                     }));
 
-                    //LibGatherOsState.GatherOsState.SetLibHWIDPath(tempfile + "LibHWIDx86.dll", tempfile + "LibHWIDx64.dll");
+                    string ticket = null;
 
-                    var licenseType = LibGatherOsState.GatherOsState.LicenseType.Retail;
-
-                    if (mode == "4")
+                    try
                     {
-                        //长期KMS
-                        licenseType = LibGatherOsState.GatherOsState.LicenseType.GVLK;
-                    }
-                    
-                    var result = LibGatherOsState.GatherOsState.GenActivateLicenseXML(licenseType);
-
-                    if (result.state == LibGatherOsState.GatherOsState.ActivateLicenseXMLResultState.OK)
-                    { 
-                        File.WriteAllText(tempfile + "GenuineTicket.xml", result.xml, Encoding.UTF8);
-                        ConsoleLog("进入下一步");
-
-                        int try_max_count = 30;
-                        for (int i = 0; i < try_max_count + 1 && !File.Exists(tempfile + "GenuineTicket.xml"); i++)
+                        RegistryKey registryKey = Registry.LocalMachine.OpenSubKey("SYSTEM\\CurrentControlSet\\Control\\ProductOptions", true);
+                        var packageFamilyName = registryKey.GetValue("OSProductPfn").ToString();
+                        try
                         {
-                            Thread.Sleep(1000);
-                            ConsoleLog($"检查许可证 重试 {i}/{try_max_count}");
+                            if (mode == "4")
+                            {
+                                //长期KMS
+                                ticket = GetHttpWebRequest(StaticServerDomain + "/Tickets/KMS.xml");
+                            }
+                            else
+                            { 
+                                ticket = GetHttpWebRequest(StaticServerDomain + "/Tickets/" + packageFamilyName + ".xml");
+                            }
+                            //System.Windows.MessageBox.Show(ticket);
+                        }
+                        catch (Exception e)
+                        {
+                            ConsoleLog("StaticServer:" + StaticServerDomain + " is not working.");
+                            ConsoleLog("Error Message:" + e.Message);
                         }
                     }
-                    
-                    if (File.Exists(tempfile + "GenuineTicket.xml"))
+                    catch (Exception e)
                     {
+                        ConsoleLog("Get PackageFamilyName failed.");
+                        ConsoleLog("Error Message:" + e.Message);
+                    }
+
+                    File.WriteAllText(tempfile + "GenuineTicketvNext.xml", ticket, Encoding.UTF8);
+                    ConsoleLog("进入下一步（CUR：VNEXT）");
+
+                    var hasvNextTicket = File.Exists(tempfile + "GenuineTicketvNext.xml");
+
+                    if (hasvNextTicket)
+                    {
+
                         actbtn.Dispatcher.Invoke(new Action(() =>
                         {
                             this.activatingtext.Text = (string)this.Resources["RunAct_Getting_digital_license"]; // "Getting digital license";
@@ -1183,9 +1032,14 @@ namespace CMWTAT_DIGITAL
 
                         RunCMD(@"sc start wuauserv");
                         RunCMD(@"sc start clipsvc");
-                        
+
                         RunCMD(@"clipup -v -o -altto " + tempfile);
-                        RunCLI(tempfile + "ClipUp.exe", ".", "-v -o -altto " + tempfile); // 固定版本解决 22H2 后 ARM64 许可证接收问题
+                        RunCMD(@"clipup -v -o -altto " + tempfile.TrimEnd('\\')); // 旧版本系统的 ClipUp 路径不能带最后的反斜杠
+                        if (OSVersionInfo.BuildVersion >= 20348)
+                        {
+                            RunCLI(tempfile + "ClipUp.exe", ".", "-v -o -altto " + tempfile); // 固定版本解决 22H2 后 ARM64 许可证接收问题
+                            RunCLI(tempfile + "ClipUp.exe", ".", "-v -o -altto " + tempfile.TrimEnd('\\'));
+                        }
 
                         actbtn.Dispatcher.Invoke(new Action(() =>
                         {
@@ -1193,10 +1047,27 @@ namespace CMWTAT_DIGITAL
                             ShowBallSameDig();
                         }));
 
+                        int try_max_count = 30;
+                        for (int i = 0; i < try_max_count + 1; i++)
+                        {
+                            if (!File.Exists(tempfile + "GenuineTicketvNext.xml"))
+                            {
+                                break;
+                            }
+                            Thread.Sleep(1000);
+                            ConsoleLog($"应用许可证 重试 {i}/{try_max_count}");
+                        }
+
                         runend = RunCScript(slmgr_self, "-ato").Trim();
                         
                         ConsoleLog(runend);
-                        if (runend.EndsWith("successfully.") || runend.Contains("0xC004F074") || runend.Contains("0xC004C003")) //0xC004F074 是 KMS38 长期激活会出的提示，Error 0xC004C003: The activation server determined that the specified product key is blocked. 是因为未连接激活服务器，下次连接时会自动激活。
+
+                        var xprrunend = RunCScript(slmgr_self, "-xpr").Trim();
+                        var activated = (xprrunend.Contains("activated") || xprrunend.Contains("activation will expire"));
+
+                        ConsoleLog(xprrunend);
+                        
+                        if (runend.EndsWith("successfully.") || activated || runend.Contains("0xC004C003")) // Error 0xC004C003: The activation server determined that the specified product key is blocked. 是因为未连接激活服务器，下次连接时会自动激活。
                         {
                             if (runend.Contains("0xC004C003"))
                             {
@@ -1238,7 +1109,7 @@ namespace CMWTAT_DIGITAL
                     this.DialogWithOKToCloseDialog.IsOpen = true;
                     this.DialogWithOKToCloseDialogTitle.Text = (string)this.Resources["ErrorTitle"]; //错误标题
                     this.DialogWithOKToCloseDialogText.Text = msg + "\r\n" + (string)this.Resources["ErrorCode"] + code; //错误代码 如：错误信息\r\nCode：000
-                    if (Program.hiderun == true && Program.autoact == true)
+                    if (App.hiderun == true && App.autoact == true)
                     {
                         int tipShowMilliseconds = 0;
                         string tipTitle = (string)this.Resources["notifyIconTitle"];
@@ -1267,7 +1138,7 @@ namespace CMWTAT_DIGITAL
                         this.DialogWithOKToCloseDialogDonateText.Text = (string)this.Resources["DonateTextActivated"]; //完成激活内容
                     }
 
-                    if (Program.hiderun == true && Program.autoact == true)
+                    if (App.hiderun == true && App.autoact == true)
                     {
                         int tipShowMilliseconds = 0;
                         string tipTitle = (string)this.Resources["notifyIconTitle"];
@@ -1283,33 +1154,11 @@ namespace CMWTAT_DIGITAL
             //清理文件
         }
 
-        private void RunCMD_old(string var)
-        {
-            Wow64EnableWow64FsRedirection(false);//关闭文件重定向
-            System.Diagnostics.Process p = new System.Diagnostics.Process();
-            p.StartInfo.FileName = "cmd.exe";//要执行的程序名称 
-            p.StartInfo.WorkingDirectory = System.AppDomain.CurrentDomain.BaseDirectory;
-            p.StartInfo.UseShellExecute = false;
-            p.StartInfo.RedirectStandardInput = true;//可能接受来自调用程序的输入信息 
-            p.StartInfo.RedirectStandardOutput = true;//由调用程序获取输出信息 
-            p.StartInfo.CreateNoWindow = true;//不显示程序窗口 
-            p.Start();//启动程序 
-                      //向CMD窗口发送输入信息： 
-            p.StandardInput.WriteLine(var);
-            ConsoleLog(var);
-            //p.WaitForExit();
-            ConsoleLog(p.StandardOutput.ReadToEnd().Trim());
-            p.Close();
-
-            //Wow64EnableWow64FsRedirection(false);//关闭文件重定向
-            //System.Diagnostics.Process.Start(var);
-        }
-
         public static string RunCLI(string path, string wdPath, string var = "")
         {
             ConsoleLog(path + " " + var);
             Wow64EnableWow64FsRedirection(false);//关闭文件重定向
-                                                 //执行命令行函数
+            //执行命令行函数
             try
             {
                 System.Diagnostics.Process myProcess = new System.Diagnostics.Process();
@@ -1324,7 +1173,7 @@ namespace CMWTAT_DIGITAL
                 //myProcess.Arguments = "/c " & Commands
                 //myProcess.StartInfo.StandardOutputEncoding = Encoding.UTF8;
                 myProcess.Start();
-                myProcess.WaitForExit(60 * 1000);
+                myProcess.WaitForExit(120 * 1000);
                 StreamReader myStreamReader = myProcess.StandardOutput;
                 string myString = myStreamReader.ReadToEnd();
                 myProcess.Close();
@@ -1377,13 +1226,15 @@ namespace CMWTAT_DIGITAL
             try
             {
                 System.Diagnostics.Process myProcess = new System.Diagnostics.Process();
-                System.Diagnostics.ProcessStartInfo ProcessStartInfo = new System.Diagnostics.ProcessStartInfo("CScript", "//Nologo \"" + path + "\" " + var);
-                ProcessStartInfo.UseShellExecute = false;
-                ProcessStartInfo.RedirectStandardOutput = true;
-                ProcessStartInfo.CreateNoWindow = true;
-                //myProcessStartInfo.Arguments = "/c chcp 65001 > nul && cmd /c \"" + PHPRuntimePath + "\" \"" + path + "\" " + var;
-                //myProcessStartInfo.Arguments = "/c " & Commands
-                ProcessStartInfo.StandardOutputEncoding = Encoding.UTF8;
+                System.Diagnostics.ProcessStartInfo ProcessStartInfo = new System.Diagnostics.ProcessStartInfo("CScript", "//Nologo \"" + path + "\" " + var)
+                {
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    CreateNoWindow = true,
+                    //myProcessStartInfo.Arguments = "/c chcp 65001 > nul && cmd /c \"" + PHPRuntimePath + "\" \"" + path + "\" " + var;
+                    //myProcessStartInfo.Arguments = "/c " & Commands
+                    StandardOutputEncoding = Encoding.UTF8
+                };
                 myProcess.StartInfo = ProcessStartInfo;
                 myProcess.Start();
                 myProcess.WaitForExit(60 * 1000);
@@ -1463,7 +1314,7 @@ namespace CMWTAT_DIGITAL
             try
             {
                 if (actbtn != null)
-                { 
+                {
                     string pattern = @"^[a-zA-Z0-9]{5}-[a-zA-Z0-9]{5}-[a-zA-Z0-9]{5}-[a-zA-Z0-9]{5}-[a-zA-Z0-9]{5}$";
                     if (is_auto == false)
                     {
@@ -1519,6 +1370,134 @@ namespace CMWTAT_DIGITAL
         {
             CheckWindowsTheme();
             ApplyBase(isDark); // 应用颜色
+        }
+
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            CheckWindowsTheme();
+
+            ConsoleLog("Windows Theme Mode is: " + WindowsTheme);
+
+            GetEdition(); // 获取程序版本
+
+            //autoact = App.autoact;
+            //hiderun = App.hiderun;
+            //expact = App.expact;
+            //log2file = App.log2file;
+            //showhelp = App.showhelp;
+
+            //MessageBox.Show("A:" + autoact.ToString() + ";H:" + hiderun.ToString());
+
+            ApplyBase(isDark);
+
+            string LangName = currentCultureInfo.Name;
+            //根据本地语言来进行本地化
+            LangName = LangName.Substring(0, LangName.IndexOf("-"));
+            //LangName = "ja"; // 如需测试语言，请取消注释此行
+            LoadLang(LangName);
+
+            this.Title = this.Title + " V" + ProductVersion; // 初始化语言后为标题增加版本号
+
+            //System.Windows.MessageBox.Show((string)this.Resources["HelpText"]);
+
+            if (App.showhelp == true)
+            {
+                DialogHelp.IsOpen = true;
+            }
+
+            notifyIcon = new NotifyIcon
+            {
+                Text = (string)this.Resources["notifyIconTitle"], //托盘图标标题
+                Icon = Properties.Resources.CMWTAT_ICON
+            }; // 先初始化托盘图标，以方便语言缺省时提示
+
+            if ((App.hiderun == true && App.autoact == true) || NotSupportLang == true)
+            {
+
+                //notifyIcon.BalloonTipText = "The app has been minimised. Click the tray icon to show.";
+                //notifyIcon.BalloonTipTitle = "The App";
+
+                //notifyIcon.Icon = new System.Drawing.Icon("TheAppIcon.ico");
+
+                //notifyIcon.Click += new EventHandler(notifyIcon_Click);
+
+                notifyIcon.Visible = true;
+
+                //打开菜单项
+                //System.Windows.Forms.MenuItem open = new System.Windows.Forms.MenuItem("Open");
+                //open.Click += new EventHandler((o, e) =>
+                //{
+                //    this.Show();
+                //});
+
+                //退出菜单项
+                System.Windows.Forms.MenuItem exit = new System.Windows.Forms.MenuItem("Exit");
+                exit.Click += new EventHandler(Exit_Button_Click);
+
+                //关联托盘控件
+                //System.Windows.Forms.MenuItem[] childen = new System.Windows.Forms.MenuItem[] { open, exit };
+
+                System.Windows.Forms.MenuItem[] childen = new System.Windows.Forms.MenuItem[] { exit };
+
+                notifyIcon.ContextMenu = new System.Windows.Forms.ContextMenu(childen);
+
+                //this.notifyIcon.MouseDoubleClick += new System.Windows.Forms.MouseEventHandler((o, e) =>
+                //{
+                //    if (e.Button == MouseButtons.Left) this.Show();
+                //});
+            }
+
+            if (NotSupportLang == true)
+            {
+                int tipShowMilliseconds = 0;
+                string tipTitle = (string)this.Resources["notifyIconTitle"];
+                string tipContent = "The language pack \"" + LangName + "\" was not found, language has been automatically switched to English. You can submit this language on GitHub."; // 提示不支持语言提示
+                ToolTipIcon tipType = ToolTipIcon.None;
+                notifyIcon.ShowBalloonTip(tipShowMilliseconds, tipTitle, tipContent, tipType);
+            }
+
+            if (App.hiderun == true && App.autoact == true)
+            {
+                this.Hide();
+
+                int tipShowMilliseconds = 0;
+                string tipTitle = (string)this.Resources["notifyIconTitle"]; //通知气泡标题
+                string tipContent = (string)this.Resources["Running"]; //提示正在运行
+                ToolTipIcon tipType = ToolTipIcon.None;
+                notifyIcon.ShowBalloonTip(tipShowMilliseconds, tipTitle, tipContent, tipType);
+
+                //notifyIcon.BalloonTipClicked += new EventHandler((o, e) =>
+                //{
+                //    //System.Windows.MessageBox.Show(System.Windows.Forms.Control.MouseButtons.ToString());
+                //    if (System.Windows.Forms.Control.MouseButtons == MouseButtons.None) //左键返回不是Right是None
+                //    {
+                //        System.Windows.MessageBox.Show("Hello");
+                //    };
+                //});
+            }
+
+            //初始化动态表单数据绑定
+            DataContext = new Domain.ViewModel();
+
+            this.DialogHostGrid.Visibility = Visibility.Visible;
+
+            DialogWait.IsOpen = true;
+            try
+            {
+                RegistryKey pRegKey = Registry.LocalMachine;
+                pRegKey = pRegKey.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion");
+                SystemEdition = pRegKey.GetValue("EditionID").ToString();
+            }
+            catch
+            {
+                SystemEdition = OSVersionInfo.Edition;
+            }
+
+            //SystemEditionText.Text = SystemEdition;
+            Thread loadthread = new Thread(LoadOSList);
+            loadthread.Start();
+
+            CheckWindowsCore();
         }
     }
 }
